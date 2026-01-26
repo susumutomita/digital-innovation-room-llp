@@ -139,12 +139,20 @@ case "$cmd" in
       exit 1
     fi
 
-    # Build array literals that cast understands (no quotes around addresses)
+    # Build array literals that cast understands (no quotes around addresses).
+    # Also trim surrounding whitespace from CSV-derived values.
     rec_lit="["; sh_lit="["
     for i in "${!rec[@]}"; do
       [[ $i -gt 0 ]] && rec_lit+="," && sh_lit+="," 
-      rec_lit+="${rec[$i]}"
-      sh_lit+="${sh[$i]}"
+
+      # trim leading/trailing whitespace (spaces/tabs/newlines)
+      trimmed_rec="${rec[$i]#${rec[$i]%%[![:space:]]*}}"
+      trimmed_rec="${trimmed_rec%${trimmed_rec##*[![:space:]]}}"
+      trimmed_sh="${sh[$i]#${sh[$i]%%[![:space:]]*}}"
+      trimmed_sh="${trimmed_sh%${trimmed_sh##*[![:space:]]}}"
+
+      rec_lit+="$trimmed_rec"
+      sh_lit+="$trimmed_sh"
     done
     rec_lit+="]"; sh_lit+="]"
 
