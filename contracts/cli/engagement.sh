@@ -103,19 +103,20 @@ case "$cmd" in
 
   deploy:mock-erc20)
     name="${1:?name}"; symbol="${2:?symbol}"; decimals="${3:?decimals}"
-    # Deploy by sending raw bytecode (cast create)
     require_env RPC_URL
     require_env PRIVATE_KEY
-    cast create --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" \
-      "$OUT_DIR/MockERC20.sol/MockERC20.json" \
+    # Use forge create (cast no longer has `create` subcommand)
+    forge create --broadcast --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" \
+      "src/MockERC20.sol:MockERC20" \
       --constructor-args "$name" "$symbol" "$decimals"
     ;;
 
   deploy:factory)
     require_env RPC_URL
     require_env PRIVATE_KEY
-    cast create --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" \
-      "$OUT_DIR/EngagementFactory.sol/EngagementFactory.json"
+    # Use forge create (cast no longer has `create` subcommand)
+    forge create --broadcast --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" \
+      "src/EngagementFactory.sol:EngagementFactory"
     ;;
 
   factory:create-engagement)
@@ -138,16 +139,24 @@ case "$cmd" in
       exit 1
     fi
 
-    # Build JSON arrays for cast
-    rec_json="["; sh_json="["
+    # Build array literals that cast understands (no quotes around addresses).
+    # Also trim surrounding whitespace from CSV-derived values.
+    rec_lit="["; sh_lit="["
     for i in "${!rec[@]}"; do
-      [[ $i -gt 0 ]] && rec_json+="," && sh_json+=","
-      rec_json+="\"${rec[$i]}\""
-      sh_json+="${sh[$i]}"
-    done
-    rec_json+="]"; sh_json+="]"
+      [[ $i -gt 0 ]] && rec_lit+="," && sh_lit+="," 
 
-    cast_send "$ENGAGEMENT_ADDRESS" "setSplit(address[],uint256[])" "$rec_json" "$sh_json"
+      # trim leading/trailing whitespace (spaces/tabs/newlines)
+      trimmed_rec="${rec[$i]#${rec[$i]%%[![:space:]]*}}"
+      trimmed_rec="${trimmed_rec%${trimmed_rec##*[![:space:]]}}"
+      trimmed_sh="${sh[$i]#${sh[$i]%%[![:space:]]*}}"
+      trimmed_sh="${trimmed_sh%${trimmed_sh##*[![:space:]]}}"
+
+      rec_lit+="$trimmed_rec"
+      sh_lit+="$trimmed_sh"
+    done
+    rec_lit+="]"; sh_lit+="]"
+
+    cast_send "$ENGAGEMENT_ADDRESS" "setSplit(address[],uint256[])" "$rec_lit" "$sh_lit"
     ;;
 
   engagement:lock)
