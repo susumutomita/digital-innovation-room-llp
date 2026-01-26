@@ -1,13 +1,14 @@
 # Polygon Amoy demo (tx-hash friendly)
 
-This document shows how to run a full end-to-end demo on **Polygon Amoy**:
+This document shows how to run an end-to-end demo on **Polygon Amoy**:
 
-- deploy a Factory
-- deploy a mock ERC20
-- create an Engagement (with match window + metadataURI)
-- set split, lock/finalize
-- mint/approve/deposit
+- deploy an `EngagementFactory`
+- create an `Engagement` (with match window + metadataURI)
+- set split, then **LOCK** (admin) *or* **finalize** (permissionless after deadline)
+- approve + deposit
 - distribute (one-tx push distribution)
+
+> Note: token can be either a **real testnet JPYC** (recommended) or a **mock ERC20** for local testing.
 
 ## Network settings (official)
 From Polygon Labs:
@@ -40,8 +41,13 @@ export PRIVATE_KEY=... # never commit
 export ENGAGEMENT_ADMIN=0xYourAdminAddress
 ```
 
-> Tip: derive your address from the private key:
-> `cast wallet address --private-key $PRIVATE_KEY`
+Tips:
+- Derive your address from the private key:
+  `cast wallet address --private-key $PRIVATE_KEY`
+- These scripts assume **Foundry v1.5+**.
+  - Contract deploy uses `forge create --broadcast` (cast no longer has `cast create`).
+
+---
 
 ## 0) Build
 ```bash
@@ -58,13 +64,22 @@ Copy the deployed address into:
 export FACTORY_ADDRESS=0x...
 ```
 
-## 2) Deploy a mock ERC20 (test payment token)
+## 2) Choose payment token
+
+### Option A (recommended): JPYC on Amoy
+Set the token address:
+
 ```bash
-./cli/engagement.sh deploy:mock-erc20 "Mock" "MOCK" 6
+export TOKEN_ADDRESS=<JPYC_TOKEN_ADDRESS_ON_AMOY>
 ```
 
-Copy the deployed address into:
+You must obtain testnet JPYC (faucet/bridge/etc.) and hold it in the account corresponding to `PRIVATE_KEY`.
+
+> TODO: fill in the JPYC Amoy contract address + how to obtain testnet JPYC.
+
+### Option B: Deploy a mock ERC20 (for demo only)
 ```bash
+./cli/engagement.sh deploy:mock-erc20 "Mock" "MOCK" 6
 export TOKEN_ADDRESS=0x...
 ```
 
@@ -97,14 +112,20 @@ export ENGAGEMENT_ADDRESS=0x...
 ./cli/engagement.sh engagement:set-match-window $start $end
 ```
 
-## 5) Set split table
-Example: 70/30 split
+## 5) Set split table (realistic example: 3 recipients)
+Example: 50/30/20 split.
 
 ```bash
-./cli/engagement.sh engagement:set-split 0xRecipient1,0xRecipient2 7000,3000
+./cli/engagement.sh engagement:set-split \
+  0xRecipient1,0xRecipient2,0xRecipient3 \
+  5000,3000,2000
 ```
 
+Notes:
+- CSV values may include spaces (e.g. `0xA, 0xB`); the script trims leading/trailing whitespace.
+
 ## 6) LOCK or finalize
+
 ### Option A: manual LOCK (admin)
 ```bash
 ./cli/engagement.sh engagement:lock
@@ -118,15 +139,32 @@ Wait until `endAt`, then:
 
 If split was empty => status becomes CANCELLED (NO-GO).
 
-## 7) Mint + approve + deposit
-Mint to the current signer (or to another payer, if you switch PRIVATE_KEY):
+## 7) Approve + deposit
+
+Payer is the current signer:
 
 ```bash
 payer=$(cast wallet address --private-key $PRIVATE_KEY)
+```
 
-./cli/engagement.sh token:mint $payer 100000000   # 100.000000 MOCK
+### If you are using mock ERC20
+Mint then approve + deposit:
+
+```bash
+./cli/engagement.sh token:mint $payer 100000000   # 100.000000 (if decimals=6)
 ./cli/engagement.sh token:approve $ENGAGEMENT_ADDRESS 100000000
 ./cli/engagement.sh engagement:deposit 100000000
+```
+
+### If you are using JPYC
+You cannot mint. Make sure the payer already holds JPYC, then:
+
+```bash
+# (example amount) replace with the correct base-unit amount for JPYC decimals
+AMOUNT=<amount_in_base_units>
+
+./cli/engagement.sh token:approve $ENGAGEMENT_ADDRESS $AMOUNT
+./cli/engagement.sh engagement:deposit $AMOUNT
 ```
 
 ## 8) Distribute (one-tx push payout)
@@ -138,9 +176,20 @@ Verify balances:
 ```bash
 cast call --rpc-url $RPC_URL $TOKEN_ADDRESS "balanceOf(address)(uint256)" 0xRecipient1
 cast call --rpc-url $RPC_URL $TOKEN_ADDRESS "balanceOf(address)(uint256)" 0xRecipient2
+cast call --rpc-url $RPC_URL $TOKEN_ADDRESS "balanceOf(address)(uint256)" 0xRecipient3
 ```
 
 ---
+
+## Polygonscan verification checklist (recommended)
+For each step, copy the **transaction hash** and open it on:
+<https://amoy.polygonscan.com/>
+
+Confirm:
+- **Status = Success**
+- Expected **From/To**
+- Expected **Token Transfers** (for mint/approve/deposit/distribute)
+- For `factory:create-engagement`, confirm the `EngagementCreated` event and grab the new `ENGAGEMENT_ADDRESS`
 
 ## Notes
 - For a 10-person cap, push distribution is fine.

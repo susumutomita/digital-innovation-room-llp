@@ -1,0 +1,37 @@
+name: contracts-forge
+
+on:
+  push:
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts-forge.yml"
+  pull_request:
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts-forge.yml"
+
+jobs:
+  forge:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install deps (forge-std)
+        run: |
+          forge --version
+          forge install --no-git foundry-rs/forge-std
+
+      - name: Build
+        run: forge build
+
+      - name: Test
+        run: forge test
