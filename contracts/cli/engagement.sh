@@ -43,6 +43,9 @@ Commands:
 
   # Engagement ops
   engagement:set-split <recipientsCsv> <sharesBpsCsv>
+  engagement:set-metadata-uri <metadataURI>
+  engagement:set-match-window <startAt> <endAt>
+  engagement:finalize
   engagement:lock
   engagement:cancel
 
@@ -64,6 +67,8 @@ Examples:
   export ENGAGEMENT_ADDRESS=0x...
   ./cli/engagement.sh engagement:set-split 0xR1,0xR2 7000,3000
   ./cli/engagement.sh engagement:lock
+  # or wait until endAt and call:
+  # ./cli/engagement.sh engagement:finalize
   ./cli/engagement.sh token:mint 0xPayer 100000000
   # run approve+deposit from the payer key
   ./cli/engagement.sh token:approve $ENGAGEMENT_ADDRESS 100000000
@@ -148,6 +153,23 @@ case "$cmd" in
   engagement:lock)
     require_env ENGAGEMENT_ADDRESS
     cast_send "$ENGAGEMENT_ADDRESS" "lock()"
+    ;;
+
+  engagement:set-metadata-uri)
+    require_env ENGAGEMENT_ADDRESS
+    uri="${1:?metadataURI}"
+    cast_send "$ENGAGEMENT_ADDRESS" "setMetadataURI(string)" "$uri"
+    ;;
+
+  engagement:set-match-window)
+    require_env ENGAGEMENT_ADDRESS
+    startAt="${1:?startAt}"; endAt="${2:?endAt}"
+    cast_send "$ENGAGEMENT_ADDRESS" "setMatchWindow(uint64,uint64)" "$startAt" "$endAt"
+    ;;
+
+  engagement:finalize)
+    require_env ENGAGEMENT_ADDRESS
+    cast_send "$ENGAGEMENT_ADDRESS" "finalize()"
     ;;
 
   engagement:cancel)
