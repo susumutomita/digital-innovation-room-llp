@@ -67,15 +67,27 @@ export FACTORY_ADDRESS=0x...
 ## 2) Choose payment token
 
 ### Option A (recommended): JPYC on Amoy
-Set the token address:
+JPYC test token faucet:
+- https://faucet.jpyc.co.jp/
+
+JPYC token contract address on **Polygon Amoy (80002)**:
 
 ```bash
-export TOKEN_ADDRESS=<JPYC_TOKEN_ADDRESS_ON_AMOY>
+export TOKEN_ADDRESS=0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29
 ```
 
-You must obtain testnet JPYC (faucet/bridge/etc.) and hold it in the account corresponding to `PRIVATE_KEY`.
+Token metadata (from faucet app config):
+- symbol: `JPYC`
+- decimals: `18`
 
-> TODO: fill in the JPYC Amoy contract address + how to obtain testnet JPYC.
+Source (faucet app bundle):
+- https://faucet.jpyc.co.jp/_next/static/chunks/50b66129cd80a755.js
+
+Obtain testnet JPYC:
+1. Open the faucet URL
+2. Connect wallet
+3. Select **Polygon Amoy**
+4. Request JPYC, then confirm your address has balance
 
 ### Option B: Deploy a mock ERC20 (for demo only)
 ```bash
@@ -160,8 +172,8 @@ Mint then approve + deposit:
 You cannot mint. Make sure the payer already holds JPYC, then:
 
 ```bash
-# (example amount) replace with the correct base-unit amount for JPYC decimals
-AMOUNT=<amount_in_base_units>
+# JPYC decimals=18. Example: 1.0 JPYC
+AMOUNT=1000000000000000000
 
 ./cli/engagement.sh token:approve $ENGAGEMENT_ADDRESS $AMOUNT
 ./cli/engagement.sh engagement:deposit $AMOUNT
