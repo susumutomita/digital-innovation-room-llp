@@ -64,3 +64,25 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+## CLI (UI option #2)
+
+A minimal CLI is included at `contracts/cli/engagement.sh`.
+
+```bash
+cd contracts
+forge build
+
+export RPC_URL=...
+export PRIVATE_KEY=...
+
+# Deploy factory
+./cli/engagement.sh deploy:factory
+
+# Deploy mock token
+./cli/engagement.sh deploy:mock-erc20 Mock MOCK 6
+
+# Then set FACTORY_ADDRESS / TOKEN_ADDRESS and create an Engagement.
+```
+
+The CLI uses `cast` under the hood.
