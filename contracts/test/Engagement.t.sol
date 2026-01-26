@@ -19,7 +19,10 @@ contract EngagementTest is Test {
     function setUp() public {
         token = new MockERC20("Mock", "MOCK", 6);
         factory = new EngagementFactory();
-        engagement = factory.create(admin, token);
+
+        uint64 startAt = uint64(block.timestamp);
+        uint64 endAt = uint64(block.timestamp + 2 days);
+        engagement = factory.create(admin, token, startAt, endAt, "https://example.com/metadata.json");
 
         token.mint(payer, 1_000_000_000); // 1,000 MOCK with 6 decimals
 
@@ -70,5 +73,14 @@ contract EngagementTest is Test {
         vm.expectRevert("BAD_STATUS");
         engagement.setSplit(rec, shares);
         vm.stopPrank();
+    }
+
+    function testFinalizeNoGoAfterDeadline() public {
+        Engagement e2 = factory.create(admin, token, uint64(block.timestamp), uint64(block.timestamp + 1), "");
+
+        vm.warp(block.timestamp + 2);
+        e2.finalize();
+
+        assertEq(uint256(e2.status()), uint256(Engagement.Status.CANCELLED));
     }
 }

@@ -11,10 +11,14 @@ contract Deploy is Script {
         address admin = vm.envAddress("ENGAGEMENT_ADMIN");
         address token = vm.envAddress("TOKEN_ADDRESS");
 
+        uint64 startAt = uint64(vm.envOr("MATCH_START_AT", uint256(block.timestamp)));
+        uint64 endAt = uint64(vm.envOr("MATCH_END_AT", uint256(block.timestamp + 2 days)));
+        string memory metadataURI = vm.envOr("METADATA_URI", string(""));
+
         vm.startBroadcast(pk);
 
         EngagementFactory factory = new EngagementFactory();
-        Engagement engagement = factory.create(admin, IERC20(token));
+        Engagement engagement = factory.create(admin, IERC20(token), startAt, endAt, metadataURI);
 
         vm.stopBroadcast();
 

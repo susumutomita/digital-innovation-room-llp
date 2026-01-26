@@ -39,7 +39,7 @@ Commands:
   # Deploy helpers
   deploy:mock-erc20 <name> <symbol> <decimals>
   deploy:factory
-  factory:create-engagement <adminAddress> <tokenAddress>
+  factory:create-engagement <adminAddress> <tokenAddress> <startAt> <endAt> <metadataURI>
 
   # Engagement ops
   engagement:set-split <recipientsCsv> <sharesBpsCsv>
@@ -60,7 +60,7 @@ Examples:
   export FACTORY_ADDRESS=0x...
   ./cli/engagement.sh deploy:mock-erc20 Mock MOCK 6
   export TOKEN_ADDRESS=0x...
-  ./cli/engagement.sh factory:create-engagement 0xAdmin $TOKEN_ADDRESS
+  ./cli/engagement.sh factory:create-engagement 0xAdmin $TOKEN_ADDRESS $(date +%s) $(($(date +%s)+172800)) https://example.com/meta.json
   export ENGAGEMENT_ADDRESS=0x...
   ./cli/engagement.sh engagement:set-split 0xR1,0xR2 7000,3000
   ./cli/engagement.sh engagement:lock
@@ -116,7 +116,8 @@ case "$cmd" in
   factory:create-engagement)
     require_env FACTORY_ADDRESS
     admin="${1:?adminAddress}"; token="${2:?tokenAddress}"
-    cast_send "$FACTORY_ADDRESS" "create(address,address)(address)" "$admin" "$token"
+    startAt="${3:?startAt}"; endAt="${4:?endAt}"; metadataURI="${5:?metadataURI}"
+    cast_send "$FACTORY_ADDRESS" "create(address,address,uint64,uint64,string)(address)" "$admin" "$token" "$startAt" "$endAt" "$metadataURI"
     echo "Tip: parse the logs to get the new Engagement address (EngagementCreated event)."
     ;;
 

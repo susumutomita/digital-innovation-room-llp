@@ -10,7 +10,8 @@ interface IERC20 {
 /// @title Engagement
 /// @notice Per-engagement revenue splitter.
 ///         - Set split table while OPEN
-///         - Lock split table
+///         - (Optionally) set match window + metadataURI while OPEN
+///         - Lock split table (manual) or finalize after deadline (permissionless)
 ///         - Accept ERC20 deposits
 ///         - Distribute pro-rata based on locked shares
 contract Engagement {
@@ -20,9 +21,14 @@ contract Engagement {
         CANCELLED
     }
 
+    event MetadataURIUpdated(string metadataURI);
+    event MatchWindowUpdated(uint64 startAt, uint64 endAt);
+
     event SplitUpdated(address[] recipients, uint256[] sharesBps);
     event Locked();
     event Cancelled();
+    event Finalized(Status status);
+
     event Deposited(address indexed payer, uint256 amount);
     event Distributed(address indexed token, uint256 amount);
     event Paid(address indexed token, address indexed to, uint256 amount);
@@ -33,13 +39,30 @@ contract Engagement {
     IERC20 public immutable token;
     Status public status;
 
+    /// @notice Off-chain reference (e.g. MoneyForward invoice id / bank transfer reference)
+    ///         or an IPFS/HTTPS URL containing richer metadata.
+    string public metadataURI;
+
+    /// @notice Matching window. Before endAt: members coordinate & set split.
+    /// After endAt: anyone can finalize (LOCK if split set, otherwise CANCEL).
+    uint64 public startAt;
+    uint64 public endAt;
+
     address[] public recipients;
     uint256[] public sharesBps;
 
-    constructor(address _admin, IERC20 _token) {
+    constructor(address _admin, IERC20 _token, uint64 _startAt, uint64 _endAt, string memory _metadataURI) {
         admin = _admin;
         token = _token;
         status = Status.OPEN;
+
+        require(_endAt == 0 || _endAt >= _startAt, "BAD_WINDOW");
+        startAt = _startAt;
+        endAt = _endAt;
+        metadataURI = _metadataURI;
+
+        emit MatchWindowUpdated(_startAt, _endAt);
+        emit MetadataURIUpdated(_metadataURI);
     }
 
     modifier onlyAdmin() {
@@ -54,6 +77,18 @@ contract Engagement {
 
     function recipientsLength() external view returns (uint256) {
         return recipients.length;
+    }
+
+    function setMetadataURI(string calldata _metadataURI) external onlyAdmin inStatus(Status.OPEN) {
+        metadataURI = _metadataURI;
+        emit MetadataURIUpdated(_metadataURI);
+    }
+
+    function setMatchWindow(uint64 _startAt, uint64 _endAt) external onlyAdmin inStatus(Status.OPEN) {
+        require(_endAt == 0 || _endAt >= _startAt, "BAD_WINDOW");
+        startAt = _startAt;
+        endAt = _endAt;
+        emit MatchWindowUpdated(_startAt, _endAt);
     }
 
     function setSplit(address[] calldata _recipients, uint256[] calldata _sharesBps)
@@ -87,6 +122,25 @@ contract Engagement {
     function cancel() external onlyAdmin inStatus(Status.OPEN) {
         status = Status.CANCELLED;
         emit Cancelled();
+    }
+
+    /// @notice Finalize after matching window ends.
+    /// Anyone can call this to avoid “backend admin work”.
+    /// - If split was set => LOCKED
+    /// - If no split => CANCELLED (NO-GO)
+    function finalize() external inStatus(Status.OPEN) {
+        require(endAt != 0, "NO_DEADLINE");
+        require(block.timestamp >= endAt, "TOO_EARLY");
+
+        if (recipients.length > 0) {
+            status = Status.LOCKED;
+            emit Locked();
+        } else {
+            status = Status.CANCELLED;
+            emit Cancelled();
+        }
+
+        emit Finalized(status);
     }
 
     function deposit(uint256 amount) external inStatus(Status.LOCKED) {
