@@ -134,7 +134,9 @@ Example: 50/30/20 split.
 ```
 
 Notes:
+- Replace `0xRecipient*` with real recipient addresses.
 - CSV values may include spaces (e.g. `0xA, 0xB`); the script trims leading/trailing whitespace.
+- Avoid committing or publishing address lists that are meant to be private/off-chain.
 
 ## 6) LOCK or finalize
 
@@ -172,8 +174,9 @@ Mint then approve + deposit:
 You cannot mint. Make sure the payer already holds JPYC, then:
 
 ```bash
-# JPYC decimals=18. Example: 1.0 JPYC
-AMOUNT=1000000000000000000
+# JPYC decimals=18.
+# Example: 10.0 JPYC total (useful if you want to see multiple payouts clearly)
+AMOUNT=10000000000000000000
 
 ./cli/engagement.sh token:approve $ENGAGEMENT_ADDRESS $AMOUNT
 ./cli/engagement.sh engagement:deposit $AMOUNT
