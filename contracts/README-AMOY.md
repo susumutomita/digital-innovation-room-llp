@@ -153,6 +153,30 @@ Wait until `endAt`, then:
 
 If split was empty => status becomes CANCELLED (NO-GO).
 
+#### Finalize demo (tx-hash example)
+Below is a complete example run on Amoy (mock token) that uses **finalize** instead of `lock`.
+Use it as a reference for what you should see on Polygonscan.
+
+- Factory: `0xF62C5Ffda4cDbe81AF1f930c0C774AE6eEa0fE5E`
+- Token (MockERC20): `0xd4cEc1b06ed4AF3a90E1EdAb5c47EF00d9ffF29d`
+- Engagement (created): `0xd6a35F61910b8Af3871F199B80bECbC45ecc3D94`
+
+Transactions:
+1. `factory:create-engagement` (start/end set)
+   - tx: `0x27f20b7f0fcba5c49be40b00c9516ee993ce9dae433217420b1f16d9abc65fd6`
+2. `engagement:set-split`
+   - tx: `0x9651a12e70ca0533112125c163edc2226ec50059d452536bbc8627b2104c022c`
+3. wait until `endAt` then `engagement:finalize`
+   - tx: `0x7ed4328f8cc56b19ac615d9418bd58d1981cc94f6d114b211d24ddfccf290597`
+4. `token:mint`
+   - tx: `0xcb4b138f3814174b6087b9dd7db86032fc1d45e05d39fc981761f9a7524d7f4a`
+5. `token:approve`
+   - tx: `0xcb4a89ed9e6efbb8a76cea9430e4ff9c7db63ed6fffc601b8ab922ef408c97a1`
+6. `engagement:deposit`
+   - tx: `0x10016460c7fb453706887218c97683bcf93d492cceab6ec1d9ba58440f203044`
+7. `engagement:distribute`
+   - tx: `0x5028e64f976b1556fa391c6a5e088d5ff14a8416013bc8d9d788fda7dff9f770`
+
 ## 7) Approve + deposit
 
 Payer is the current signer:
