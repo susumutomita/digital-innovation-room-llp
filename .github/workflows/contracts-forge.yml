@@ -44,5 +44,13 @@ jobs:
       - name: Build
         run: forge build
 
-      - name: Test
+      - name: Test (forge)
         run: forge test
+
+      - name: Install bats
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats
+
+      - name: Test (cli)
+        run: bats test/cli.bats
