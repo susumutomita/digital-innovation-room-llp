@@ -58,21 +58,21 @@ SH
 }
 
 @test "engagement:status prints mapped status and links" {
-  run bash -lc "cd contracts && ./cli/engagement.sh engagement:status"
+  run bash -c "cd contracts && ./cli/engagement.sh engagement:status"
   [ "$status" -eq 0 ]
   [[ "$output" == *"status: LOCKED"* ]]
   [[ "$output" == *"Explorer:"*"/address/0x1111111111111111111111111111111111111111"* ]]
 }
 
 @test "engagement:set-split PRETTY=1 trims whitespace and prints Total BPS" {
-  run bash -lc "cd contracts && PRETTY=1 ./cli/engagement.sh engagement:set-split '0xA, 0xB' '5000, 5000'"
+  run bash -c "cd contracts && PRETTY=1 ./cli/engagement.sh engagement:set-split '0xA, 0xB' '5000, 5000'"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Total BPS: 10000"* ]]
   [[ "$output" == *"50/50"* ]]
 }
 
 @test "cast_send prints tx explorer link" {
-  run bash -lc "cd contracts && ./cli/engagement.sh engagement:lock"
+  run bash -c "cd contracts && ./cli/engagement.sh engagement:lock"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Explorer:"*"/tx/0xaaaaaaaa"* ]]
 }
