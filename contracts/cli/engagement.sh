@@ -36,6 +36,9 @@ Env:
 Commands:
   help
 
+  # Info
+  engagement:status
+
   # Deploy helpers
   deploy:mock-erc20 <name> <symbol> <decimals>
   deploy:factory
@@ -43,11 +46,13 @@ Commands:
 
   # Engagement ops
   engagement:set-split <recipientsCsv> <sharesBpsCsv>
+    # optional env: PRETTY=1 (print preview + sum bps)
   engagement:set-metadata-uri <metadataURI>
   engagement:set-match-window <startAt> <endAt>
   engagement:finalize
   engagement:lock
   engagement:cancel
+  engagement:status
 
   # Token helpers
   token:mint <to> <amount>
@@ -77,10 +82,48 @@ Examples:
 USAGE
 }
 
+EXPLORER_BASE_DEFAULT="https://amoy.polygonscan.com"
+
+explorer_base() {
+  # Allow override via env. Fallback to Amoy Polygonscan.
+  echo "${EXPLORER_BASE:-$EXPLORER_BASE_DEFAULT}"
+}
+
+print_tx_link() {
+  local tx="$1"
+  [[ -z "$tx" ]] && return 0
+  echo "Explorer: $(explorer_base)/tx/$tx"
+}
+
+print_addr_link() {
+  local addr="$1"
+  [[ -z "$addr" ]] && return 0
+  echo "Explorer: $(explorer_base)/address/$addr"
+}
+
+extract_tx_hash() {
+  # Extract tx hash from common cast/forge outputs.
+  # - cast send receipt contains: transactionHash      0x...
+  # - forge create contains: Transaction hash: 0x...
+  grep -Eo '0x[a-fA-F0-9]{64}' | head -n 1
+}
+
 cast_send() {
   require_env RPC_URL
   require_env PRIVATE_KEY
-  cast send --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" "$@"
+
+  if [[ "${DRY_RUN:-0}" == "1" ]]; then
+    echo "[dry-run] cast send --rpc-url $RPC_URL --private-key <redacted> $*"
+    return 0
+  fi
+
+  # Capture output to print explorer link.
+  local out
+  out=$(cast send --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" "$@")
+  echo "$out"
+  local tx
+  tx=$(echo "$out" | extract_tx_hash || true)
+  print_tx_link "$tx"
 }
 
 cast_call() {
@@ -105,18 +148,35 @@ case "$cmd" in
     name="${1:?name}"; symbol="${2:?symbol}"; decimals="${3:?decimals}"
     require_env RPC_URL
     require_env PRIVATE_KEY
+    if [[ "${DRY_RUN:-0}" == "1" ]]; then
+      echo "[dry-run] forge create --broadcast --rpc-url $RPC_URL --private-key <redacted> src/MockERC20.sol:MockERC20 --constructor-args '$name' '$symbol' '$decimals'"
+      exit 0
+    fi
     # Use forge create (cast no longer has `create` subcommand)
-    forge create --broadcast --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" \
+    out=$(forge create --broadcast --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" \
       "src/MockERC20.sol:MockERC20" \
-      --constructor-args "$name" "$symbol" "$decimals"
+      --constructor-args "$name" "$symbol" "$decimals")
+    echo "$out"
+    tx=$(echo "$out" | extract_tx_hash || true)
+    print_tx_link "$tx"
+    # small celebratory, low-noise
+    [[ -n "$tx" ]] && echo "DEPLOY SUCCESS. MAY YOUR GAS BE LOW."
     ;;
 
   deploy:factory)
     require_env RPC_URL
     require_env PRIVATE_KEY
+    if [[ "${DRY_RUN:-0}" == "1" ]]; then
+      echo "[dry-run] forge create --broadcast --rpc-url $RPC_URL --private-key <redacted> src/EngagementFactory.sol:EngagementFactory"
+      exit 0
+    fi
     # Use forge create (cast no longer has `create` subcommand)
-    forge create --broadcast --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" \
-      "src/EngagementFactory.sol:EngagementFactory"
+    out=$(forge create --broadcast --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" \
+      "src/EngagementFactory.sol:EngagementFactory")
+    echo "$out"
+    tx=$(echo "$out" | extract_tx_hash || true)
+    print_tx_link "$tx"
+    [[ -n "$tx" ]] && echo "DEPLOY SUCCESS. MAY YOUR GAS BE LOW."
     ;;
 
   factory:create-engagement)
@@ -142,6 +202,7 @@ case "$cmd" in
     # Build array literals that cast understands (no quotes around addresses).
     # Also trim surrounding whitespace from CSV-derived values.
     rec_lit="["; sh_lit="["
+    sum_bps=0
     for i in "${!rec[@]}"; do
       [[ $i -gt 0 ]] && rec_lit+="," && sh_lit+="," 
 
@@ -153,8 +214,30 @@ case "$cmd" in
 
       rec_lit+="$trimmed_rec"
       sh_lit+="$trimmed_sh"
+
+      # sum BPS for a friendly preview
+      if [[ -n "$trimmed_sh" ]]; then
+        sum_bps=$((sum_bps + trimmed_sh))
+      fi
     done
     rec_lit+="]"; sh_lit+="]"
+
+    if [[ "${PRETTY:-0}" == "1" ]]; then
+      echo "Split preview (bps):"
+      for i in "${!rec[@]}"; do
+        tr="${rec[$i]#${rec[$i]%%[![:space:]]*}}"; tr="${tr%${tr##*[![:space:]]}}"
+        ts="${sh[$i]#${sh[$i]%%[![:space:]]*}}"; ts="${ts%${ts##*[![:space:]]}}"
+        echo "- $tr : $ts"
+      done
+      echo "Total BPS: $sum_bps (expected 10000)"
+
+      # totally unnecessary commentary
+      if [[ ${#rec[@]} -eq 2 && ( "$shares_csv" == *"5000"* && "$shares_csv" == *"5000"* ) ]]; then
+        echo "50/50 = 平和。"
+      elif [[ ${#rec[@]} -eq 2 && ( "$shares_csv" == *"7000"* && "$shares_csv" == *"3000"* ) ]]; then
+        echo "70/30 = えらい。"
+      fi
+    fi
 
     cast_send "$ENGAGEMENT_ADDRESS" "setSplit(address[],uint256[])" "$rec_lit" "$sh_lit"
     ;;
@@ -184,6 +267,31 @@ case "$cmd" in
   engagement:cancel)
     require_env ENGAGEMENT_ADDRESS
     cast_send "$ENGAGEMENT_ADDRESS" "cancel()"
+    ;;
+
+  engagement:status)
+    require_env ENGAGEMENT_ADDRESS
+    echo "Engagement: $ENGAGEMENT_ADDRESS"
+    print_addr_link "$ENGAGEMENT_ADDRESS"
+
+    admin=$(cast_call "$ENGAGEMENT_ADDRESS" "admin()(address)")
+    token=$(cast_call "$ENGAGEMENT_ADDRESS" "token()(address)")
+    status=$(cast_call "$ENGAGEMENT_ADDRESS" "status()(uint8)")
+    startAt=$(cast_call "$ENGAGEMENT_ADDRESS" "startAt()(uint64)")
+    endAt=$(cast_call "$ENGAGEMENT_ADDRESS" "endAt()(uint64)")
+
+    status_name="UNKNOWN"
+    case "${status%% *}" in
+      0) status_name="OPEN";;
+      1) status_name="LOCKED";;
+      2) status_name="CANCELLED";;
+    esac
+
+    echo "status: $status_name ($status)"
+    echo "admin:  $admin"; print_addr_link "$admin"
+    echo "token:  $token"; print_addr_link "$token"
+    echo "startAt: $startAt"
+    echo "endAt:   $endAt"
     ;;
 
   token:mint)
