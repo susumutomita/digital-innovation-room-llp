@@ -15,11 +15,15 @@ set -euo pipefail
 cmd="$1"; shift || true
 case "$cmd" in
   send)
+    # skip flags
+    while [[ "${1:-}" == --* ]]; do shift; [[ "${1:-}" == "" ]] && break; done
     # minimal receipt-like output
     echo "status               1 (success)"
     echo "transactionHash      0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     ;;
   call)
+    # skip flags like: --rpc-url <url>
+    while [[ "${1:-}" == --* ]]; do shift; shift || true; done
     to="$1"; sig="$2"; shift 2
     case "$sig" in
       "admin()(address)") echo "0x2222222222222222222222222222222222222222";;
