@@ -23,12 +23,23 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          # Pin for reproducible CI
+          version: "1.5.1"
+
+      - name: Cache Foundry artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            contracts/cache
+            contracts/out
+            contracts/lib
+          key: ${{ runner.os }}-foundry-${{ hashFiles('contracts/foundry.toml', 'contracts/foundry.lock') }}
 
       - name: Install deps (forge-std)
         run: |
           forge --version
-          forge install --no-git foundry-rs/forge-std
+          # install only if missing (cache-friendly)
+          test -d lib/forge-std || forge install --no-git foundry-rs/forge-std
 
       - name: Build
         run: forge build
