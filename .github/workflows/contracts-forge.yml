@@ -35,17 +35,18 @@ jobs:
             contracts/lib
           key: ${{ runner.os }}-foundry-${{ hashFiles('contracts/foundry.toml', 'contracts/foundry.lock') }}
 
-      - name: Install deps (forge-std)
+      - name: Install deps (forge-std, openzeppelin)
         run: |
           forge --version
           # install only if missing (cache-friendly)
           test -d lib/forge-std || forge install --no-git foundry-rs/forge-std
+          test -d lib/openzeppelin-contracts/contracts || forge install --no-git OpenZeppelin/openzeppelin-contracts@v5.0.2
 
       - name: Build
         run: forge build
 
       - name: Test (forge)
-        run: forge test
+        run: forge test --fuzz-runs 2000
 
       - name: Install bats
         run: |

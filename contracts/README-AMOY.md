@@ -64,6 +64,11 @@ Copy the deployed address into:
 export FACTORY_ADDRESS=0x...
 ```
 
+Notes:
+- The factory deploys an upgradeable **Beacon** internally. The beacon owner (upgrade authority) is
+  initially the deployer, and should be transferred to your Safe once available:
+  `transferBeaconOwnership(SAFE_ADDRESS)`
+
 ## 2) Choose payment token
 
 ### Option A (recommended): JPYC on Amoy
