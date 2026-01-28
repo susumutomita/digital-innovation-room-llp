@@ -22,7 +22,9 @@ RPC_URL="http://127.0.0.1:${ANVIL_PORT}"
 PRIVATE_KEY=${PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80}
 
 cleanup() {
-  [[ -n "${ANVIL_PID:-}" ]] && kill "$ANVIL_PID" >/dev/null 2>&1 || true
+  if [[ -n "${ANVIL_PID:-}" ]]; then
+    kill "$ANVIL_PID" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT
 
@@ -94,8 +96,6 @@ fi
 
 # Parse event topic for EngagementCreated(address indexed engagement,...)
 # Topic0 = keccak256("EngagementCreated(address,address,address)")
-TOPIC0=0xea36933885a748971ecbb94a1640d15cb83b0e0e4612df2dda22e993909dcb41
-
 # Parse EngagementCreated event from the tx receipt via JSON-RPC (wait until mined).
 ENGAGEMENT_ADDRESS=$(python3 - "$RPC_URL" "$create_tx" <<'PY'
 import json,sys,time,subprocess
