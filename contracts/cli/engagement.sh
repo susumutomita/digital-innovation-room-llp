@@ -208,9 +208,9 @@ case "$cmd" in
 
       # trim leading/trailing whitespace (spaces/tabs/newlines)
       trimmed_rec="${rec[$i]#${rec[$i]%%[![:space:]]*}}"
-      trimmed_rec="${trimmed_rec%${trimmed_rec##*[![:space:]]}}"
+      trimmed_rec="${trimmed_rec%"${trimmed_rec##*[![:space:]]}"}"
       trimmed_sh="${sh[$i]#${sh[$i]%%[![:space:]]*}}"
-      trimmed_sh="${trimmed_sh%${trimmed_sh##*[![:space:]]}}"
+      trimmed_sh="${trimmed_sh%"${trimmed_sh##*[![:space:]]}"}"
 
       rec_lit+="$trimmed_rec"
       sh_lit+="$trimmed_sh"
@@ -225,8 +225,8 @@ case "$cmd" in
     if [[ "${PRETTY:-0}" == "1" ]]; then
       echo "Split preview (bps):"
       for i in "${!rec[@]}"; do
-        tr="${rec[$i]#${rec[$i]%%[![:space:]]*}}"; tr="${tr%${tr##*[![:space:]]}}"
-        ts="${sh[$i]#${sh[$i]%%[![:space:]]*}}"; ts="${ts%${ts##*[![:space:]]}}"
+        tr="${rec[$i]#${rec[$i]%%[![:space:]]*}}"; tr="${tr%"${tr##*[![:space:]]}"}"
+        ts="${sh[$i]#${sh[$i]%%[![:space:]]*}}"; ts="${ts%"${ts##*[![:space:]]}"}"
         echo "- $tr : $ts"
       done
       echo "Total BPS: $sum_bps (expected 10000)"

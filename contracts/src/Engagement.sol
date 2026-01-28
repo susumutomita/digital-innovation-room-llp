@@ -61,7 +61,9 @@ contract Engagement {
     }
 
     /// @dev Initializer for proxy deployments.
-    function initialize(address _admin, IERC20 _token, uint64 _startAt, uint64 _endAt, string calldata _metadataURI) external {
+    function initialize(address _admin, IERC20 _token, uint64 _startAt, uint64 _endAt, string calldata _metadataURI)
+        external
+    {
         require(!_initialized, "ALREADY_INITIALIZED");
         _initialized = true;
 

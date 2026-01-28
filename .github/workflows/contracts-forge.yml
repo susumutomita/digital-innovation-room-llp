@@ -48,10 +48,18 @@ jobs:
       - name: Test (forge)
         run: forge test --fuzz-runs 2000
 
-      - name: Install bats
+      - name: Install linters + test tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y bats
+          sudo apt-get install -y bats shellcheck
 
-      - name: Test (cli)
+      - name: Lint (format + shell)
+        run: |
+          forge fmt --check
+          shellcheck -x cli/*.sh script/*.sh
+
+      - name: Test (cli unit)
         run: bats test/cli.bats
+
+      - name: Test (anvil e2e)
+        run: bash script/e2e_anvil.sh
