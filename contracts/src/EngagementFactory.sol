@@ -24,7 +24,8 @@ contract EngagementFactory {
         external
         returns (Engagement)
     {
-        bytes memory initData = abi.encodeWithSelector(Engagement.initialize.selector, admin, token, startAt, endAt, metadataURI);
+        bytes memory initData =
+            abi.encodeWithSelector(Engagement.initialize.selector, admin, token, startAt, endAt, metadataURI);
         BeaconProxy proxy = new BeaconProxy(address(beacon), initData);
 
         emit EngagementCreated(address(proxy), admin, address(token));
