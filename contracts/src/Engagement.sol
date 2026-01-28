@@ -7,13 +7,9 @@ interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 }
 
-/// @title Engagement
+/// @title Engagement (Upgradeable)
 /// @notice Per-engagement revenue splitter.
-///         - Set split table while OPEN
-///         - (Optionally) set match window + metadataURI while OPEN
-///         - Lock split table (manual) or finalize after deadline (permissionless)
-///         - Accept ERC20 deposits
-///         - Distribute pro-rata based on locked shares
+///         Designed to be used behind a proxy (BeaconProxy).
 contract Engagement {
     enum Status {
         OPEN,
@@ -35,11 +31,12 @@ contract Engagement {
 
     uint256 public constant TOTAL_BPS = 10_000;
 
-    address public immutable admin;
-    IERC20 public immutable token;
+    // NOTE: no immutables in upgradeable contracts.
+    address public admin;
+    IERC20 public token;
     Status public status;
 
-    /// @notice Off-chain reference (e.g. MoneyForward invoice id / bank transfer reference)
+    /// @notice Off-chain reference (e.g. invoice id / bank transfer reference)
     ///         or an IPFS/HTTPS URL containing richer metadata.
     string public metadataURI;
 
@@ -51,19 +48,7 @@ contract Engagement {
     address[] public recipients;
     uint256[] public sharesBps;
 
-    constructor(address _admin, IERC20 _token, uint64 _startAt, uint64 _endAt, string memory _metadataURI) {
-        admin = _admin;
-        token = _token;
-        status = Status.OPEN;
-
-        require(_endAt == 0 || _endAt >= _startAt, "BAD_WINDOW");
-        startAt = _startAt;
-        endAt = _endAt;
-        metadataURI = _metadataURI;
-
-        emit MatchWindowUpdated(_startAt, _endAt);
-        emit MetadataURIUpdated(_metadataURI);
-    }
+    bool private _initialized;
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "NOT_ADMIN");
@@ -75,8 +60,23 @@ contract Engagement {
         _;
     }
 
-    function recipientsLength() external view returns (uint256) {
-        return recipients.length;
+    /// @dev Initializer for proxy deployments.
+    function initialize(address _admin, IERC20 _token, uint64 _startAt, uint64 _endAt, string calldata _metadataURI) external {
+        require(!_initialized, "ALREADY_INITIALIZED");
+        _initialized = true;
+
+        admin = _admin;
+        token = _token;
+        status = Status.OPEN;
+
+        require(_endAt == 0 || _endAt >= _startAt, "BAD_WINDOW");
+        startAt = _startAt;
+        endAt = _endAt;
+
+        metadataURI = _metadataURI;
+
+        emit MatchWindowUpdated(_startAt, _endAt);
+        emit MetadataURIUpdated(_metadataURI);
     }
 
     function setMetadataURI(string calldata _metadataURI) external onlyAdmin inStatus(Status.OPEN) {
@@ -157,10 +157,9 @@ contract Engagement {
         require(bal > 0, "NO_BALANCE");
 
         uint256 sent;
-        uint256 n = recipients.length;
-        for (uint256 i = 0; i < n; i++) {
+        for (uint256 i = 0; i < recipients.length; i++) {
             uint256 amt;
-            if (i == n - 1) {
+            if (i == recipients.length - 1) {
                 amt = bal - sent;
             } else {
                 amt = (bal * sharesBps[i]) / TOTAL_BPS;

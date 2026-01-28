@@ -45,7 +45,7 @@ jobs:
         run: forge build
 
       - name: Test (forge)
-        run: forge test
+        run: forge test --fuzz-runs 2000
 
       - name: Install bats
         run: |
