@@ -162,6 +162,10 @@ If split was empty => status becomes CANCELLED (NO-GO).
 Below is a complete example run on Amoy (mock token) that uses **finalize** instead of `lock`.
 Use it as a reference for what you should see on Polygonscan.
 
+#### JPYC demo (tx-hash example)
+To be added once JPYC test tokens are received from the faucet and the flow is executed.
+(We will record tx hashes for: approve → deposit → distribute, and the EngagementCreated tx.)
+
 - Factory: `0xF62C5Ffda4cDbe81AF1f930c0C774AE6eEa0fE5E`
 - Token (MockERC20): `0xd4cEc1b06ed4AF3a90E1EdAb5c47EF00d9ffF29d`
 - Engagement (created): `0xd6a35F61910b8Af3871F199B80bECbC45ecc3D94`
@@ -202,6 +206,14 @@ Mint then approve + deposit:
 ### If you are using JPYC
 You cannot mint. Make sure the payer already holds JPYC, then:
 
+#### Step A: receive JPYC test tokens
+This requires a wallet UI (MetaMask).
+1. Go to https://faucet.jpyc.co.jp/
+2. Switch network to **Polygon Amoy**
+3. Request JPYC
+4. Confirm balance on Polygonscan (Token Transfers / ERC-20 Token Txns)
+
+#### Step B: approve + deposit
 ```bash
 # JPYC decimals=18.
 # Example: 10.0 JPYC total (useful if you want to see multiple payouts clearly)
@@ -209,6 +221,18 @@ AMOUNT=10000000000000000000
 
 ./cli/engagement.sh token:approve $ENGAGEMENT_ADDRESS $AMOUNT
 ./cli/engagement.sh engagement:deposit $AMOUNT
+```
+
+#### Step C: distribute
+```bash
+./cli/engagement.sh engagement:distribute
+```
+
+Verify recipient balances (JPYC):
+```bash
+cast call --rpc-url $RPC_URL $TOKEN_ADDRESS "balanceOf(address)(uint256)" 0xRecipient1
+cast call --rpc-url $RPC_URL $TOKEN_ADDRESS "balanceOf(address)(uint256)" 0xRecipient2
+cast call --rpc-url $RPC_URL $TOKEN_ADDRESS "balanceOf(address)(uint256)" 0xRecipient3
 ```
 
 ## 8) Distribute (one-tx push payout)
