@@ -1,4 +1,7 @@
-.PHONY: deps build test test-unit test-cli test-anvil lint fmt
+.PHONY: deps build test test-unit test-cli test-anvil lint fmt bootstrap
+
+bootstrap:
+	bash script/bootstrap.sh
 
 FOUNDRY_FUZZ_RUNS ?= 2000
 
