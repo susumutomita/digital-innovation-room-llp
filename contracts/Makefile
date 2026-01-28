@@ -22,7 +22,7 @@ test-unit: deps
 	forge test --fuzz-runs $(FOUNDRY_FUZZ_RUNS)
 
 test-cli:
-	@command -v bats >/dev/null 2>&1 || (echo "bats not installed" && exit 1)
+	@command -v bats >/dev/null 2>&1 || (echo "bats not installed. Install: brew install bats-core  OR  sudo apt-get install -y bats" && exit 1)
 	bats test/cli.bats
 
 test-anvil: deps

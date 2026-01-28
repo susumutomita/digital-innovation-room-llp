@@ -9,6 +9,9 @@ on:
     paths:
       - "contracts/**"
       - ".github/workflows/contracts-forge.yml"
+  schedule:
+    # nightly heavy run (UTC)
+    - cron: "17 3 * * *"
 
 jobs:
   forge:
@@ -16,6 +19,10 @@ jobs:
     defaults:
       run:
         working-directory: contracts
+
+    env:
+      # PRs: keep it reasonably fast. Nightly (schedule) runs heavier.
+      FUZZ_RUNS: ${{ github.event_name == 'schedule' && '20000' || '2000' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +53,7 @@ jobs:
         run: forge build
 
       - name: Test (forge)
-        run: forge test --fuzz-runs 2000
+        run: forge test --fuzz-runs $FUZZ_RUNS
 
       - name: Install linters + test tools
         run: |
@@ -62,4 +69,9 @@ jobs:
         run: bats test/cli.bats
 
       - name: Test (anvil e2e)
-        run: bash script/e2e_anvil.sh
+        # PR/push: run once. Nightly: run twice to catch flakes.
+        run: |
+          bash script/e2e_anvil.sh
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            bash script/e2e_anvil.sh
+          fi
