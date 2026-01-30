@@ -66,8 +66,23 @@ export FACTORY_ADDRESS=0x...
 
 Notes:
 - The factory deploys an upgradeable **Beacon** internally. The beacon owner (upgrade authority) is
-  initially the deployer, and should be transferred to your Safe once available:
-  `transferBeaconOwnership(SAFE_ADDRESS)`
+  initially the deployer, and should be transferred to your Safe once available.
+
+  Transfer ownership (once your Safe exists):
+  ```bash
+  cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+    $FACTORY_ADDRESS "transferBeaconOwnership(address)" 0xYourSafeAddress
+  ```
+
+  Verify ownership:
+  1. Read beacon address:
+     ```bash
+     cast call --rpc-url $RPC_URL $FACTORY_ADDRESS "beacon()(address)"
+     ```
+  2. Read beacon owner:
+     ```bash
+     cast call --rpc-url $RPC_URL <BEACON_ADDRESS> "owner()(address)"
+     ```
 
 ## 2) Choose payment token
 
@@ -92,7 +107,8 @@ Obtain testnet JPYC:
 1. Open the faucet URL
 2. Connect wallet
 3. Select **Polygon Amoy**
-4. Request JPYC, then confirm your address has balance
+4. Request JPYC
+5. Confirm your address has JPYC on Polygonscan (Token Transfers / ERC-20 Token Txns)
 
 ### Option B: Deploy a mock ERC20 (for demo only)
 ```bash
@@ -102,6 +118,10 @@ export TOKEN_ADDRESS=0x...
 
 ## 3) Create an Engagement
 Choose a short window for demo (e.g. 2 minutes):
+
+> Step-by-step tip (JPYC path): You can do the whole CLI part with the tx hashes in order:
+> `deploy:factory → create-engagement → set-split → lock/finalize → approve → deposit → distribute`.
+> Each command prints an Explorer link.
 
 ```bash
 now=$(date +%s)
